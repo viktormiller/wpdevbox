@@ -1,0 +1,109 @@
+name: ${COMPOSE_PROJECT_NAME:-wpdevbox}
+
+services:
+  php:
+    image: webdevops/php-apache-dev:${PHP_VERSION:-8.2}
+    container_name: devbox-php
+    environment:
+      PHP_DISMOD: xdebug
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      PHP_SENDMAIL_PATH: /usr/sbin/sendmail -S mailpit:1025
+      WEB_DOCUMENT_ROOT: /var/www/html
+      XDEBUG_MODE: off
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+    volumes:
+      - ./data/www:/var/www/html:delegated
+      - ./config/php/custom.ini:/opt/docker/etc/php/php.ini
+    depends_on:
+      - db
+      - mailpit
+    networks: [devbox]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: devbox-nginx
+    profiles: ["nginx"]
+    volumes:
+      - ./data/www:/var/www/html:delegated
+      - ./config/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./config/certs:/etc/nginx/certs:ro
+    ports:
+      - "${HTTP_PORT:-18080}:80"
+      - "${HTTPS_PORT:-18443}:443"
+    depends_on:
+      - php
+    networks: [devbox]
+
+  apache:
+    image: httpd:2.4-alpine
+    container_name: devbox-apache
+    profiles: ["apache"]
+    volumes:
+      - ./data/www:/var/www/html:delegated
+      - ./config/apache/httpd-vhosts.conf:/usr/local/apache2/conf/extra/httpd-vhosts.conf:ro
+      - ./config/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+      - ./config/certs:/usr/local/apache2/conf/certs:ro
+    ports:
+      - "${HTTP_PORT:-18080}:80"
+      - "${HTTPS_PORT:-18443}:443"
+    depends_on:
+      - php
+    networks: [devbox]
+
+  db:
+    image: ${MYSQL_IMAGE:-mariadb:10.11}
+    container_name: devbox-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: bootstrap
+      MYSQL_USER: ${MYSQL_USER:-wp}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-wp}
+    ports:
+      - "${MYSQL_PORT:-13307}:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    networks: [devbox]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: devbox-mailpit
+    ports:
+      - "${MAILPIT_UI_PORT:-18025}:8025"
+      - "${MAILPIT_SMTP_PORT:-11025}:1025"
+    networks: [devbox]
+
+  adminer:
+    image: adminer:4
+    container_name: devbox-adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "${ADMINER_PORT:-18081}:8080"
+    depends_on:
+      - db
+    networks: [devbox]
+
+  dashboard:
+    image: node:22-alpine
+    container_name: devbox-dashboard
+    working_dir: /app
+    command: ["sh", "-c", "node server.js"]
+    volumes:
+      - ./dashboard:/app
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${DASHBOARD_PORT:-19000}:9000"
+    networks: [devbox]
+
+networks:
+  devbox:
+
+volumes:
+  db_data:

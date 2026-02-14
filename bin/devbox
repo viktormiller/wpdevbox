@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+if [[ -f .env ]]; then
+  source .env
+fi
+
+web_profile="${WEB_SERVER:-nginx}"
+compose=(docker compose)
+
+cmd="${1:-help}"; shift || true
+
+case "$cmd" in
+  up)
+    "${compose[@]}" --profile "$web_profile" up -d "$@"
+    ;;
+  down)
+    "${compose[@]}" down "$@"
+    ;;
+  restart)
+    "${compose[@]}" --profile "$web_profile" down
+    "${compose[@]}" --profile "$web_profile" up -d
+    ;;
+  status)
+    "${compose[@]}" ps
+    echo
+    echo "Dashboard: http://localhost:${DASHBOARD_PORT:-19000}"
+    echo "Mailpit:   http://localhost:${MAILPIT_UI_PORT:-18025}"
+    echo "Adminer:   http://localhost:${ADMINER_PORT:-18081}"
+    echo "HTTP:      http://<site>.loc:${HTTP_PORT:-18080}"
+    ;;
+  logs)
+    "${compose[@]}" logs -f "${1:-}"
+    ;;
+  wp)
+    "${compose[@]}" exec -T php wp "$@"
+    ;;
+  help|*)
+    cat <<USAGE
+Usage: devbox <command>
+  up|down|restart|status|logs [service]
+  wp <args...>
+USAGE
+    ;;
+esac
