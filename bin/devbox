@@ -1,47 +1,177 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 if [[ -f .env ]]; then
+  # shellcheck disable=SC1091
   source .env
 fi
 
 web_profile="${WEB_SERVER:-nginx}"
 compose=(docker compose)
+tld="${TLD:-loc}"
 
 cmd="${1:-help}"; shift || true
 
+require_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "Error: docker is not installed or not in PATH." >&2
+    exit 1
+  fi
+}
+
+ensure_site_name() {
+  local name="${1:-}"
+  if [[ -z "$name" ]]; then
+    echo "Usage: devbox add-site <name> [--with-wp]" >&2
+    exit 1
+  fi
+  if [[ ! "$name" =~ ^[a-z0-9-]+$ ]]; then
+    echo "Error: site name must match ^[a-z0-9-]+$" >&2
+    exit 1
+  fi
+}
+
+db_name_for_site() {
+  local name="$1"
+  local db="wp_${name//-/_}"
+  echo "$db"
+}
+
+print_urls() {
+  echo "Dashboard: http://localhost:${DASHBOARD_PORT:-19000}"
+  echo "Mailpit:   http://localhost:${MAILPIT_UI_PORT:-18025}"
+  echo "Adminer:   http://localhost:${ADMINER_PORT:-18081}"
+  echo "HTTP:      http://<site>.${tld}:${HTTP_PORT:-18080}"
+  echo "HTTPS:     https://<site>.${tld}:${HTTPS_PORT:-18443}"
+  echo "DB host:   127.0.0.1:${MYSQL_PORT:-13307}"
+}
+
+add_site() {
+  require_docker
+
+  local site="$1"; shift || true
+  local with_wp="false"
+  if [[ "${1:-}" == "--with-wp" ]]; then
+    with_wp="true"
+  fi
+
+  ensure_site_name "$site"
+
+  local site_dir="data/www/${site}"
+  local db_name
+  db_name="$(db_name_for_site "$site")"
+
+  mkdir -p "$site_dir"
+  mkdir -p data/www/general
+
+  if [[ ! -f "$site_dir/index.php" && "$with_wp" != "true" ]]; then
+    cat > "$site_dir/index.php" <<PHP
+<?php
+// Placeholder for ${site}
+phpinfo();
+PHP
+  fi
+
+  echo "[1/4] Ensuring containers are running..."
+  "${compose[@]}" --profile "$web_profile" up -d db php "$web_profile"
+
+  echo "[2/4] Creating database ${db_name} (if missing)..."
+  "${compose[@]}" exec -T db sh -lc "mysql -uroot -p\"${MYSQL_ROOT_PASSWORD:-root}\" -e \"CREATE DATABASE IF NOT EXISTS \\\`${db_name}\\\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\""
+
+  if [[ "$with_wp" == "true" ]]; then
+    echo "[3/4] Installing WordPress core files..."
+    "${compose[@]}" exec -T php sh -lc "cd /var/www/html/${site} && wp core download --allow-root"
+    cat > "${site_dir}/wp-config.devbox.php" <<CFG
+<?php
+// Optional helper for wp-config.php include.
+define('DB_NAME', '${db_name}');
+define('DB_USER', '${MYSQL_USER:-wp}');
+define('DB_PASSWORD', '${MYSQL_PASSWORD:-wp}');
+define('DB_HOST', 'db');
+CFG
+    echo "Created ${site_dir}/wp-config.devbox.php"
+  fi
+
+  echo "[4/4] Reloading web server..."
+  if [[ "$web_profile" == "nginx" ]]; then
+    "${compose[@]}" exec -T nginx nginx -s reload >/dev/null 2>&1 || true
+  else
+    "${compose[@]}" exec -T apache httpd -k graceful >/dev/null 2>&1 || true
+  fi
+
+  echo
+  echo "✅ Site created: ${site}"
+  echo "   Domain: ${site}.${tld}"
+  echo "   HTTP:   http://${site}.${tld}:${HTTP_PORT:-18080}"
+  echo "   HTTPS:  https://${site}.${tld}:${HTTPS_PORT:-18443}"
+  echo "   DB:     ${db_name}"
+  echo
+  echo "Host resolution setup (choose one):"
+  echo "- Recommended (dnsmasq): run ./bin/devbox dns-setup"
+  echo "- Fallback /etc/hosts entry: 127.0.0.1 ${site}.${tld}"
+}
+
+dns_setup() {
+  cat <<TXT
+macOS dnsmasq setup for *.${tld} -> 127.0.0.1
+
+1) brew install dnsmasq
+2) echo 'address=/.${tld}/127.0.0.1' | sudo tee /opt/homebrew/etc/dnsmasq.d/${tld}.conf
+   (Intel path often: /usr/local/etc/dnsmasq.d/${tld}.conf)
+3) sudo mkdir -p /etc/resolver
+4) echo 'nameserver 127.0.0.1' | sudo tee /etc/resolver/${tld}
+5) sudo brew services restart dnsmasq
+
+Test:
+  dig +short test.${tld}
+Should return 127.0.0.1
+TXT
+}
+
 case "$cmd" in
   up)
+    require_docker
     "${compose[@]}" --profile "$web_profile" up -d "$@"
     ;;
   down)
+    require_docker
     "${compose[@]}" down "$@"
     ;;
   restart)
+    require_docker
     "${compose[@]}" --profile "$web_profile" down
     "${compose[@]}" --profile "$web_profile" up -d
     ;;
   status)
+    require_docker
     "${compose[@]}" ps
     echo
-    echo "Dashboard: http://localhost:${DASHBOARD_PORT:-19000}"
-    echo "Mailpit:   http://localhost:${MAILPIT_UI_PORT:-18025}"
-    echo "Adminer:   http://localhost:${ADMINER_PORT:-18081}"
-    echo "HTTP:      http://<site>.loc:${HTTP_PORT:-18080}"
+    print_urls
     ;;
   logs)
+    require_docker
     "${compose[@]}" logs -f "${1:-}"
     ;;
   wp)
+    require_docker
     "${compose[@]}" exec -T php wp "$@"
+    ;;
+  add-site)
+    add_site "$@"
+    ;;
+  dns-setup)
+    dns_setup
     ;;
   help|*)
     cat <<USAGE
 Usage: devbox <command>
   up|down|restart|status|logs [service]
   wp <args...>
+  add-site <name> [--with-wp]
+  dns-setup
 USAGE
     ;;
 esac

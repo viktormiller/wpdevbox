@@ -32,5 +32,39 @@ Configured in `.env` and chosen to avoid common Local WP defaults.
 
 ## CLI
 
-- `./bin/devbox up|down|restart|status|logs`
-- `./bin/devbox wp --info`
+```bash
+./bin/devbox up
+./bin/devbox down
+./bin/devbox restart
+./bin/devbox status
+./bin/devbox logs [service]
+./bin/devbox wp --info
+./bin/devbox add-site asi
+./bin/devbox add-site ffb --with-wp
+./bin/devbox dns-setup
+```
+
+`add-site` creates:
+- `data/www/<name>/`
+- MySQL database `wp_<name>`
+- domain mapping via wildcard routing (`<name>.loc` by default)
+
+## Domain resolution
+
+Recommended (macOS): dnsmasq resolver for `*.loc`.
+
+```bash
+./bin/devbox dns-setup
+```
+
+Fallback: add hosts entries manually, e.g.:
+
+```bash
+127.0.0.1 asi.loc
+```
+
+## Notes
+
+- Current MVP uses one PHP version for all sites (configurable globally).
+- Site-specific SSL generation is planned next.
+- Dashboard is currently read-only.
