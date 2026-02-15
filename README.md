@@ -39,15 +39,32 @@ Configured in `.env` and chosen to avoid common Local WP defaults.
 ./bin/devbox status
 ./bin/devbox logs [service]
 ./bin/devbox wp --info
+./bin/devbox ssl-init
 ./bin/devbox add-site asi
 ./bin/devbox add-site ffb --with-wp
 ./bin/devbox dns-setup
 ```
 
+`ssl-init` creates local trusted certs (mkcert) for `*.loc` and `localhost` in `config/certs/`.
+
 `add-site` creates:
 - `data/www/<name>/`
 - MySQL database `wp_<name>`
 - domain mapping via wildcard routing (`<name>.loc` by default)
+
+## SSL (mkcert)
+
+Install mkcert (macOS):
+
+```bash
+brew install mkcert nss
+```
+
+Then initialize certs:
+
+```bash
+./bin/devbox ssl-init
+```
 
 ## Domain resolution
 

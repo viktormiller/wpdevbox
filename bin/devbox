@@ -9,9 +9,12 @@ if [[ -f .env ]]; then
   source .env
 fi
 
-web_profile="${WEB_SERVER:-nginx}"
-compose=(docker compose)
+web_profile="${WEB_SERVER:-apache}"
 tld="${TLD:-loc}"
+compose=(docker compose)
+CERT_DIR="config/certs"
+CERT_FILE="${CERT_DIR}/devbox.${tld}.pem"
+KEY_FILE="${CERT_DIR}/devbox.${tld}-key.pem"
 
 cmd="${1:-help}"; shift || true
 
@@ -49,6 +52,29 @@ print_urls() {
   echo "DB host:   127.0.0.1:${MYSQL_PORT:-13307}"
 }
 
+ssl_init() {
+  mkdir -p "$CERT_DIR"
+
+  if [[ -f "$CERT_FILE" && -f "$KEY_FILE" ]]; then
+    echo "SSL cert already present: $CERT_FILE"
+    return 0
+  fi
+
+  if ! command -v mkcert >/dev/null 2>&1; then
+    echo "mkcert not found. Install first, then run: ./bin/devbox ssl-init" >&2
+    echo "macOS: brew install mkcert nss && mkcert -install" >&2
+    exit 1
+  fi
+
+  echo "Generating local CA certs for *.${tld} ..."
+  mkcert -install
+  mkcert -cert-file "$CERT_FILE" -key-file "$KEY_FILE" "*.${tld}" "${tld}" "localhost" "127.0.0.1" "::1"
+
+  echo "✅ SSL ready"
+  echo "   cert: $CERT_FILE"
+  echo "   key : $KEY_FILE"
+}
+
 add_site() {
   require_docker
 
@@ -73,6 +99,13 @@ add_site() {
 // Placeholder for ${site}
 phpinfo();
 PHP
+  fi
+
+  if [[ ! -f "$CERT_FILE" || ! -f "$KEY_FILE" ]]; then
+    echo "SSL certs missing -> attempting ./bin/devbox ssl-init"
+    ssl_init || {
+      echo "Continuing without HTTPS cert generation. Run ./bin/devbox ssl-init later." >&2
+    }
   fi
 
   echo "[1/4] Ensuring containers are running..."
@@ -162,6 +195,9 @@ case "$cmd" in
   add-site)
     add_site "$@"
     ;;
+  ssl-init)
+    ssl_init
+    ;;
   dns-setup)
     dns_setup
     ;;
@@ -171,6 +207,7 @@ Usage: devbox <command>
   up|down|restart|status|logs [service]
   wp <args...>
   add-site <name> [--with-wp]
+  ssl-init
   dns-setup
 USAGE
     ;;

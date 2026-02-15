@@ -31,5 +31,5 @@
 - ✅ `devbox up/down/restart/status/logs/wp`
 - ✅ `devbox add-site <name> [--with-wp]` (creates folder + db + domain-ready routing)
 - ✅ dnsmasq setup guide (`devbox dns-setup`)
-- 🚧 SSL CA + cert automation
+- ✅ SSL CA + cert automation bootstrap (`devbox ssl-init` with mkcert wildcard cert)
 - 🚧 Rich dashboard status/config controls
