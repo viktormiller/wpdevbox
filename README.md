@@ -6,7 +6,7 @@ Docker-based local WordPress environment designed as a Devilbox replacement.
 
 ```bash
 cp .env.example .env
-./bin/devbox up
+./bin/devbox up --build
 ./bin/devbox status
 ```
 
@@ -51,6 +51,8 @@ Configured in `.env` and chosen to avoid common Local WP defaults.
 - `data/www/<name>/`
 - MySQL database `wp_<name>`
 - domain mapping via wildcard routing (`<name>.loc` by default)
+
+If WP-CLI is missing in the `php` container, `devbox` auto-installs it on first `devbox wp ...` call or `add-site --with-wp`.
 
 ## SSL (mkcert)
 

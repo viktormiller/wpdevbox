@@ -2,10 +2,15 @@ name: ${COMPOSE_PROJECT_NAME:-wpdevbox}
 
 services:
   php:
-    image: webdevops/php-apache-dev:${PHP_VERSION:-8.2}
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        PHP_VERSION: ${PHP_VERSION:-8.2}
+    image: wpdevbox-php:${PHP_VERSION:-8.2}
     container_name: devbox-php
     environment:
-      PHP_DISMOD: xdebug
+      PHP_DISMOD: xdebug,ioncube
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       PHP_SENDMAIL_PATH: /usr/sbin/sendmail -S mailpit:1025

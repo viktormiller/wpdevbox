@@ -15,6 +15,7 @@ compose=(docker compose)
 CERT_DIR="config/certs"
 CERT_FILE="${CERT_DIR}/devbox.${tld}.pem"
 KEY_FILE="${CERT_DIR}/devbox.${tld}-key.pem"
+WP_CLI_PHAR_URL="https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
 
 cmd="${1:-help}"; shift || true
 
@@ -50,6 +51,24 @@ print_urls() {
   echo "HTTP:      http://<site>.${tld}:${HTTP_PORT:-18080}"
   echo "HTTPS:     https://<site>.${tld}:${HTTPS_PORT:-18443}"
   echo "DB host:   127.0.0.1:${MYSQL_PORT:-13307}"
+}
+
+ensure_wp_cli() {
+  require_docker
+
+  if "${compose[@]}" exec -T php sh -lc 'command -v wp >/dev/null 2>&1'; then
+    return 0
+  fi
+
+  echo "WP-CLI missing in php container -> installing..."
+  "${compose[@]}" exec -T php sh -lc "set -e; curl -fsSL '$WP_CLI_PHAR_URL' -o /usr/local/bin/wp; chmod +x /usr/local/bin/wp"
+
+  if ! "${compose[@]}" exec -T php sh -lc 'command -v wp >/dev/null 2>&1'; then
+    echo "Error: WP-CLI install failed in php container." >&2
+    exit 1
+  fi
+
+  echo "✅ WP-CLI installed"
 }
 
 ssl_init() {
@@ -115,6 +134,7 @@ PHP
   "${compose[@]}" exec -T db sh -lc "mysql -uroot -p\"${MYSQL_ROOT_PASSWORD:-root}\" -e \"CREATE DATABASE IF NOT EXISTS \\\`${db_name}\\\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\""
 
   if [[ "$with_wp" == "true" ]]; then
+    ensure_wp_cli
     echo "[3/4] Installing WordPress core files..."
     "${compose[@]}" exec -T php sh -lc "cd /var/www/html/${site} && wp core download --allow-root"
     cat > "${site_dir}/wp-config.devbox.php" <<CFG
@@ -190,6 +210,7 @@ case "$cmd" in
     ;;
   wp)
     require_docker
+    ensure_wp_cli
     "${compose[@]}" exec -T php wp "$@"
     ;;
   add-site)
