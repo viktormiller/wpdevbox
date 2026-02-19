@@ -21,6 +21,7 @@ services:
     volumes:
       - ./data/www:/var/www/html:delegated
       - ./config/php/custom.ini:/opt/docker/etc/php/php.ini
+      - ./config/php/fpm-listen.conf:/usr/local/etc/php-fpm.d/zzz-listen.conf:ro
     depends_on:
       - db
       - mailpit
