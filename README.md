@@ -12,7 +12,7 @@ cp .env.example .env
 
 ## Directory layout
 
-- `data/www/<site>`: site roots (e.g. `data/www/asi`)
+- `data/www/<site>`: site roots (e.g. `data/www/mysite`)
 - `data/www/general`: shared code directory
 
 This preserves relative include paths between sites and `general/`.
@@ -24,7 +24,7 @@ This preserves relative include paths between sites and `general/`.
 - DB (`MYSQL_IMAGE` configurable)
 - Mailpit
 - Adminer
-- Dashboard (MVP)
+- Dashboard (live status, site management)
 
 ## Ports
 
@@ -40,8 +40,9 @@ Configured in `.env` and chosen to avoid common Local WP defaults.
 ./bin/devbox logs [service]
 ./bin/devbox wp --info
 ./bin/devbox ssl-init
-./bin/devbox add-site asi
-./bin/devbox add-site ffb --with-wp
+./bin/devbox add-site mysite
+./bin/devbox add-site myblog --with-wp
+./bin/devbox remove-site mysite
 ./bin/devbox dns-setup
 ./bin/devbox doctor
 ./bin/devbox doctor --json
@@ -53,6 +54,8 @@ Configured in `.env` and chosen to avoid common Local WP defaults.
 - `data/www/<name>/`
 - MySQL database `wp_<name>`
 - domain mapping via wildcard routing (`<name>.loc` by default)
+
+`remove-site` deletes the site directory and drops the database after a confirmation prompt.
 
 If WP-CLI is missing in the `php` container, `devbox` auto-installs it on first `devbox wp ...` call or `add-site --with-wp`.
 
@@ -81,11 +84,19 @@ Recommended (macOS): dnsmasq resolver for `*.loc`.
 Fallback: add hosts entries manually, e.g.:
 
 ```bash
-127.0.0.1 asi.loc
+127.0.0.1 mysite.loc
 ```
+
+## Dashboard
+
+The dashboard at `http://localhost:19000` (default port) provides:
+
+- Live container status with auto-refresh
+- Site listing with links to HTTP, HTTPS, WP Admin, and Adminer
+- Add and delete sites directly from the UI (creates/removes directories and databases)
+- Configuration overview
 
 ## Notes
 
 - Current MVP uses one PHP version for all sites (configurable globally).
 - Site-specific SSL generation is planned next.
-- Dashboard is currently read-only.

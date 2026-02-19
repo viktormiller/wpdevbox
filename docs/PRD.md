@@ -30,6 +30,7 @@
 - ✅ Foundation compose stack
 - ✅ `devbox up/down/restart/status/logs/wp`
 - ✅ `devbox add-site <name> [--with-wp]` (creates folder + db + domain-ready routing)
+- ✅ `devbox remove-site <name>` (drops db + removes folder with confirmation)
 - ✅ dnsmasq setup guide (`devbox dns-setup`)
 - ✅ SSL CA + cert automation bootstrap (`devbox ssl-init` with mkcert wildcard cert)
-- 🚧 Rich dashboard status/config controls
+- ✅ Dashboard with live container/site status and site management (add/delete via UI)
