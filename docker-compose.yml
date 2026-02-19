@@ -104,7 +104,7 @@ services:
     volumes:
       - ./dashboard:/app
       - ./.env:/app/.env:ro
-      - ./data/www:/sites:ro
+      - ./data/www:/sites
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "${DASHBOARD_PORT:-19000}:9000"

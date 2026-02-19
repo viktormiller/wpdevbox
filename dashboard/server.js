@@ -65,6 +65,104 @@ function dockerGet(apiPath) {
   });
 }
 
+function dockerPost(apiPath, body) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body);
+    const sock = net.createConnection(DOCKER_SOCKET, () => {
+      sock.write(
+        `POST ${apiPath} HTTP/1.0\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: ${Buffer.byteLength(payload)}\r\n\r\n${payload}`
+      );
+    });
+
+    let data = '';
+    sock.on('data', (chunk) => { data += chunk.toString(); });
+    sock.on('end', () => {
+      const bodyStart = data.indexOf('\r\n\r\n');
+      if (bodyStart === -1) return reject(new Error('Bad HTTP response'));
+      const respBody = data.slice(bodyStart + 4);
+      try { resolve(JSON.parse(respBody)); }
+      catch (e) { reject(new Error('JSON parse failed: ' + e.message)); }
+    });
+    sock.on('error', reject);
+    sock.setTimeout(10000, () => { sock.destroy(); reject(new Error('Timeout')); });
+  });
+}
+
+function dockerPostRaw(apiPath, body) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body);
+    const sock = net.createConnection(DOCKER_SOCKET, () => {
+      sock.write(
+        `POST ${apiPath} HTTP/1.0\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: ${Buffer.byteLength(payload)}\r\n\r\n${payload}`
+      );
+    });
+
+    const chunks = [];
+    sock.on('data', (chunk) => { chunks.push(chunk); });
+    sock.on('end', () => {
+      const raw = Buffer.concat(chunks);
+      const str = raw.toString();
+      const bodyStart = str.indexOf('\r\n\r\n');
+      if (bodyStart === -1) return reject(new Error('Bad HTTP response'));
+      // Return raw buffer after headers for multiplexed stream parsing
+      const headerLen = Buffer.byteLength(str.slice(0, bodyStart + 4));
+      resolve(raw.slice(headerLen));
+    });
+    sock.on('error', reject);
+    sock.setTimeout(10000, () => { sock.destroy(); reject(new Error('Timeout')); });
+  });
+}
+
+async function dockerExec(containerId, cmd) {
+  // Create exec instance
+  const exec = await dockerPost(
+    `/v1.44/containers/${containerId}/exec`,
+    { Cmd: cmd, AttachStdout: true, AttachStderr: true }
+  );
+  if (!exec.Id) throw new Error('Failed to create exec: ' + JSON.stringify(exec));
+
+  // Start exec and capture multiplexed stream
+  const raw = await dockerPostRaw(
+    `/v1.44/exec/${exec.Id}/start`,
+    { Detach: false, Tty: false }
+  );
+
+  // Parse Docker multiplexed stream (8-byte header per frame)
+  let output = '';
+  let offset = 0;
+  while (offset + 8 <= raw.length) {
+    const size = raw.readUInt32BE(offset + 4);
+    offset += 8;
+    if (offset + size > raw.length) break;
+    output += raw.slice(offset, offset + size).toString();
+    offset += size;
+  }
+
+  // Get exit code
+  let exitCode = -1;
+  try {
+    const inspect = await dockerGet(`/v1.44/exec/${exec.Id}/json`);
+    exitCode = inspect.ExitCode;
+  } catch { /* ignore */ }
+
+  return { exitCode, output };
+}
+
+// ---------------------------------------------------------------------------
+// JSON body parser
+// ---------------------------------------------------------------------------
+function parseBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      try { resolve(JSON.parse(body)); }
+      catch { resolve({}); }
+    });
+    req.on('error', reject);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // API: /api/config
 // ---------------------------------------------------------------------------
@@ -156,6 +254,82 @@ async function apiContainers(req, res) {
 }
 
 // ---------------------------------------------------------------------------
+// API: POST /api/sites — Create a new site
+// ---------------------------------------------------------------------------
+async function apiCreateSite(req, res) {
+  try {
+    const body = await parseBody(req);
+    const name = (body.name || '').trim();
+
+    if (!/^[a-z0-9-]+$/.test(name)) {
+      return json(res, { error: 'Invalid name. Use lowercase letters, numbers, and hyphens only.' }, 400);
+    }
+
+    const siteDir = path.join(SITES_DIR, name);
+    if (dirExists(siteDir)) {
+      return json(res, { error: `Site '${name}' already exists.` }, 400);
+    }
+
+    // Create directory and placeholder index.php
+    fs.mkdirSync(siteDir, { recursive: true });
+    fs.writeFileSync(path.join(siteDir, 'index.php'), `<?php\n// Placeholder for ${name}\nphpinfo();\n`);
+
+    // Create database via exec into the db container
+    const dbName = 'wp_' + name.replace(/-/g, '_');
+    const env = parseEnv(ENV_PATH);
+    const rootPw = env.MYSQL_ROOT_PASSWORD || 'root';
+    const result = await dockerExec('devbox-db', [
+      'mysql', '-uroot', `-p${rootPw}`, '-e',
+      `CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+    ]);
+
+    if (result.exitCode !== 0) {
+      return json(res, { error: 'Database creation failed: ' + result.output }, 500);
+    }
+
+    json(res, { ok: true, name });
+  } catch (err) {
+    json(res, { error: err.message }, 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// API: DELETE /api/sites/:name — Delete a site
+// ---------------------------------------------------------------------------
+async function apiDeleteSite(req, res, siteName) {
+  try {
+    if (!/^[a-z0-9-]+$/.test(siteName)) {
+      return json(res, { error: 'Invalid site name.' }, 400);
+    }
+
+    const siteDir = path.join(SITES_DIR, siteName);
+    if (!dirExists(siteDir)) {
+      return json(res, { error: `Site '${siteName}' not found.` }, 404);
+    }
+
+    // Drop database via exec into the db container
+    const dbName = 'wp_' + siteName.replace(/-/g, '_');
+    const env = parseEnv(ENV_PATH);
+    const rootPw = env.MYSQL_ROOT_PASSWORD || 'root';
+    const result = await dockerExec('devbox-db', [
+      'mysql', '-uroot', `-p${rootPw}`, '-e',
+      `DROP DATABASE IF EXISTS \`${dbName}\`;`
+    ]);
+
+    if (result.exitCode !== 0) {
+      return json(res, { error: 'Database drop failed: ' + result.output }, 500);
+    }
+
+    // Remove site directory
+    fs.rmSync(siteDir, { recursive: true, force: true });
+
+    json(res, { ok: true });
+  } catch (err) {
+    json(res, { error: err.message }, 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Static file serving
 // ---------------------------------------------------------------------------
 function serveStatic(req, res) {
@@ -211,6 +385,15 @@ const server = http.createServer(async (req, res) => {
       case '/api/containers': return apiContainers(req, res);
       default:                return serveStatic(req, res);
     }
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/sites') {
+    return apiCreateSite(req, res);
+  }
+
+  const deleteMatch = req.method === 'DELETE' && urlPath.match(/^\/api\/sites\/([a-z0-9-]+)$/);
+  if (deleteMatch) {
+    return apiDeleteSite(req, res, deleteMatch[1]);
   }
 
   notFound(res);

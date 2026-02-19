@@ -74,7 +74,7 @@
     count.textContent = sites.length + (sites.length === 1 ? ' site' : ' sites');
 
     if (!sites.length) {
-      grid.innerHTML = '<div class="empty-state">No sites yet. Run <code>./bin/devbox add-site mysite</code> to create one.</div>';
+      grid.innerHTML = '<div class="empty-state">No sites yet. Click "Add Site" or run <code>./bin/devbox add-site mysite</code></div>';
       return;
     }
 
@@ -96,8 +96,13 @@
       var cardClass = animate ? 'card' : 'card card--no-anim';
 
       return '<div class="' + cardClass + '"' + animStyle + '>' +
-        '<div class="site-name">' + esc(s.name) + '</div>' +
-        '<div class="site-domain">' + esc(s.domain) + '</div>' +
+        '<div class="site-header">' +
+          '<div>' +
+            '<div class="site-name">' + esc(s.name) + '</div>' +
+            '<div class="site-domain">' + esc(s.domain) + '</div>' +
+          '</div>' +
+          '<button class="btn btn--danger" onclick="window.__deleteSite(\'' + esc(s.name) + '\')" title="Delete site">Delete</button>' +
+        '</div>' +
         '<div class="site-links">' + links.join('') + '</div>' +
         '<div class="site-meta">' +
           wpBadge +
@@ -106,6 +111,49 @@
       '</div>';
     }).join('');
   }
+
+  // ── Add / Delete site actions ─────────────────────────────
+  async function addSite(name) {
+    try {
+      var res = await fetch('/api/sites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name }),
+      });
+      var text = await res.text();
+      var data;
+      try { data = JSON.parse(text); } catch { data = { error: text }; }
+      if (!res.ok) {
+        alert('Error: ' + (data.error || 'Unknown error'));
+        return;
+      }
+      prevSitesJSON = '';
+      pollData();
+    } catch (e) {
+      alert('Failed to add site: ' + e.message);
+    }
+  }
+
+  async function deleteSite(name) {
+    if (!confirm('Delete site "' + name + '" and its database? This cannot be undone.')) return;
+    try {
+      var res = await fetch('/api/sites/' + encodeURIComponent(name), { method: 'DELETE' });
+      var text = await res.text();
+      var data;
+      try { data = JSON.parse(text); } catch { data = { error: text }; }
+      if (!res.ok) {
+        alert('Error: ' + (data.error || 'Unknown error'));
+        return;
+      }
+      prevSitesJSON = '';
+      pollData();
+    } catch (e) {
+      alert('Failed to delete site: ' + e.message);
+    }
+  }
+
+  // Expose for inline onclick handlers
+  window.__deleteSite = deleteSite;
 
   // ── Quick Links ────────────────────────────────────────────
   function renderQuickLinks(cfg) {
@@ -219,6 +267,33 @@
       console.error('Poll error:', e);
     }
   }
+
+  // ── Modal wiring ───────────────────────────────────────────
+  var overlay = document.getElementById('modal-overlay');
+  var addForm = document.getElementById('add-site-form');
+  var nameInput = document.getElementById('site-name-input');
+
+  document.getElementById('btn-add-site').addEventListener('click', function () {
+    overlay.hidden = false;
+    nameInput.value = '';
+    nameInput.focus();
+  });
+
+  document.getElementById('btn-cancel-add').addEventListener('click', function () {
+    overlay.hidden = true;
+  });
+
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) overlay.hidden = true;
+  });
+
+  addForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = nameInput.value.trim();
+    if (!name) return;
+    overlay.hidden = true;
+    addSite(name);
+  });
 
   // ── Init ───────────────────────────────────────────────────
   showSkeletons();

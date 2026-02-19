@@ -167,6 +167,40 @@ CFG
   echo "- Fallback /etc/hosts entry: 127.0.0.1 ${site}.${tld}"
 }
 
+remove_site() {
+  require_docker
+
+  local site="${1:-}"
+  if [[ -z "$site" ]]; then
+    echo "Usage: devbox remove-site <name>" >&2
+    exit 1
+  fi
+  ensure_site_name "$site"
+
+  local site_dir="data/www/${site}"
+  local db_name
+  db_name="$(db_name_for_site "$site")"
+
+  if [[ ! -d "$site_dir" ]]; then
+    echo "Error: site directory '$site_dir' does not exist." >&2
+    exit 1
+  fi
+
+  read -rp "Remove site '$site' and database '$db_name'? [y/N] " confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "Aborted."
+    exit 0
+  fi
+
+  echo "Dropping database ${db_name}..."
+  "${compose[@]}" exec -T db mysql -uroot -p"${MYSQL_ROOT_PASSWORD:-root}" -e "DROP DATABASE IF EXISTS \`${db_name}\`;"
+
+  echo "Removing ${site_dir}..."
+  rm -rf "$site_dir"
+
+  echo "✅ Site removed: ${site}"
+}
+
 dns_setup() {
   cat <<TXT
 macOS dnsmasq setup for *.${tld} -> 127.0.0.1
@@ -342,6 +376,9 @@ case "$cmd" in
   add-site)
     add_site "$@"
     ;;
+  remove-site)
+    remove_site "$@"
+    ;;
   ssl-init)
     ssl_init
     ;;
@@ -357,6 +394,7 @@ Usage: devbox <command>
   up|down|restart|status|logs [service]
   wp <args...>
   add-site <name> [--with-wp]
+  remove-site <name>
   ssl-init
   dns-setup
   doctor [--json]

@@ -448,6 +448,118 @@ body {
   50%      { opacity: 0.3; }
 }
 
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.btn:hover { border-color: var(--border-hi); }
+
+.btn--primary {
+  background: var(--accent-hi);
+  border-color: var(--accent-hi);
+  color: #fff;
+}
+
+.btn--primary:hover { background: var(--accent); border-color: var(--accent); }
+
+.btn--secondary {
+  background: var(--surface);
+  color: var(--text-dim);
+}
+
+.btn--danger {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-mute);
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.btn--danger:hover { color: var(--red); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); }
+
+/* ── Modal ────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.modal-overlay[hidden] { display: none; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  animation: cardIn 0.2s ease both;
+}
+
+.modal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.modal-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 0.35rem;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  outline: none;
+}
+
+.modal-input:focus { border-color: var(--accent); }
+
+.modal-hint {
+  font-size: 0.7rem;
+  color: var(--text-mute);
+  margin-top: 0.35rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+/* ── Site card delete button ─────────────────────────────── */
+.site-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 /* ── Empty State ──────────────────────────────────────────── */
 .empty-state {
   padding: 2rem;

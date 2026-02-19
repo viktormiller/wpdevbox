@@ -39,9 +39,25 @@
       <div class="section-head">
         <h2 class="section-title">Sites</h2>
         <span class="section-count" id="sites-count"></span>
+        <button class="btn btn--primary" id="btn-add-site">+ Add Site</button>
       </div>
       <div class="card-grid card-grid--sites" id="sites-grid"></div>
     </section>
+
+    <div class="modal-overlay" id="modal-overlay" hidden>
+      <div class="modal">
+        <h3 class="modal-title">Add Site</h3>
+        <form id="add-site-form">
+          <label class="modal-label" for="site-name-input">Site name</label>
+          <input class="modal-input" id="site-name-input" type="text" placeholder="my-site" pattern="[a-z0-9\-]+" required autocomplete="off">
+          <p class="modal-hint">Lowercase letters, numbers, and hyphens only</p>
+          <div class="modal-actions">
+            <button type="button" class="btn btn--secondary" id="btn-cancel-add">Cancel</button>
+            <button type="submit" class="btn btn--primary">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <section class="section" id="section-links">
       <div class="section-head">
