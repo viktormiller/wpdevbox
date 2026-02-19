@@ -6,6 +6,9 @@
 
   const POLL_INTERVAL = 10_000;
   let config = {};
+  let prevContainersJSON = '';
+  let prevSitesJSON = '';
+  let firstRender = { services: true, sites: true };
 
   // ── Fetch helpers ──────────────────────────────────────────
   async function fetchJSON(url) {
@@ -29,7 +32,7 @@
   }
 
   // ── Services ───────────────────────────────────────────────
-  function renderServices(containers) {
+  function renderServices(containers, animate) {
     const grid = document.getElementById('services-grid');
     const count = document.getElementById('services-count');
     const running = containers.filter(function (c) { return c.state === 'running'; }).length;
@@ -49,7 +52,10 @@
         return '<span class="port-tag">' + esc(p) + '</span>';
       }).join('');
 
-      return '<div class="card" style="animation-delay:' + (i * 40) + 'ms">' +
+      var animStyle = animate ? ' style="animation-delay:' + (i * 40) + 'ms"' : '';
+      var cardClass = animate ? 'card' : 'card card--no-anim';
+
+      return '<div class="' + cardClass + '"' + animStyle + '>' +
         '<div class="card-header">' +
           '<span class="status-dot ' + dotClass + '"></span>' +
           '<span class="card-service">' + esc(c.service) + '</span>' +
@@ -62,7 +68,7 @@
   }
 
   // ── Sites ──────────────────────────────────────────────────
-  function renderSites(sites) {
+  function renderSites(sites, animate) {
     var grid = document.getElementById('sites-grid');
     var count = document.getElementById('sites-count');
     count.textContent = sites.length + (sites.length === 1 ? ' site' : ' sites');
@@ -86,7 +92,10 @@
         ? '<span class="wp-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 1.5c4.687 0 8.5 3.813 8.5 8.5 0 4.687-3.813 8.5-8.5 8.5-4.687 0-8.5-3.813-8.5-8.5 0-4.687 3.813-8.5 8.5-8.5zm-4.5 8.5l2.8 7.5L6 12zm3 0l3 7.5L10.5 12zm3.5 0l3 7.5-3-7.5zm3 0l2.5 7L17 12z"/></svg> WordPress</span>'
         : '';
 
-      return '<div class="card" style="animation-delay:' + (i * 40) + 'ms">' +
+      var animStyle = animate ? ' style="animation-delay:' + (i * 40) + 'ms"' : '';
+      var cardClass = animate ? 'card' : 'card card--no-anim';
+
+      return '<div class="' + cardClass + '"' + animStyle + '>' +
         '<div class="site-name">' + esc(s.name) + '</div>' +
         '<div class="site-domain">' + esc(s.domain) + '</div>' +
         '<div class="site-links">' + links.join('') + '</div>' +
@@ -192,12 +201,22 @@
       ]);
       var containers = Array.isArray(data[0]) ? data[0] : [];
       var sites = Array.isArray(data[1]) ? data[1] : [];
-      renderServices(containers);
-      renderSites(sites);
+
+      var cJSON = JSON.stringify(containers);
+      var sJSON = JSON.stringify(sites);
+
+      if (cJSON !== prevContainersJSON) {
+        renderServices(containers, firstRender.services);
+        prevContainersJSON = cJSON;
+        firstRender.services = false;
+      }
+      if (sJSON !== prevSitesJSON) {
+        renderSites(sites, firstRender.sites);
+        prevSitesJSON = sJSON;
+        firstRender.sites = false;
+      }
     } catch (e) {
       console.error('Poll error:', e);
-      renderServices([]);
-      renderSites([]);
     }
   }
 

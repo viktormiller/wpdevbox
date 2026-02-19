@@ -161,6 +161,8 @@ body {
   animation: cardIn 0.3s ease both;
 }
 
+.card--no-anim { animation: none; }
+
 .card:hover {
   border-color: var(--border-hi);
   transform: translateY(-1px);
