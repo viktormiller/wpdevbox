@@ -131,7 +131,7 @@ PHP
   "${compose[@]}" --profile "$web_profile" up -d db php "$web_profile"
 
   echo "[2/4] Creating database ${db_name} (if missing)..."
-  "${compose[@]}" exec -T db sh -lc "mysql -uroot -p\"${MYSQL_ROOT_PASSWORD:-root}\" -e \"CREATE DATABASE IF NOT EXISTS \\\`${db_name}\\\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\""
+  "${compose[@]}" exec -T db mysql -uroot -p"${MYSQL_ROOT_PASSWORD:-root}" -e "CREATE DATABASE IF NOT EXISTS \`${db_name}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
   if [[ "$with_wp" == "true" ]]; then
     ensure_wp_cli
@@ -285,7 +285,7 @@ doctor() {
     mark_fail "service_web" "$web_profile not running"
   fi
 
-  if "${compose[@]}" exec -T db sh -lc "mysqladmin ping -h localhost -u root -p\"${MYSQL_ROOT_PASSWORD:-root}\" >/dev/null 2>&1"; then
+  if "${compose[@]}" exec -T db mysqladmin ping -h localhost -u root -p"${MYSQL_ROOT_PASSWORD:-root}" >/dev/null 2>&1; then
     mark_ok "db_ping" "database reachable"
   else
     mark_fail "db_ping" "database ping failed"
