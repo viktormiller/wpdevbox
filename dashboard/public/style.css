@@ -1,0 +1,481 @@
+/* ── Reset & Base ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0f172a;
+  --surface:   #1e293b;
+  --border:    #334155;
+  --border-hi: #475569;
+  --text:      #e2e8f0;
+  --text-dim:  #94a3b8;
+  --text-mute: #64748b;
+  --accent:    #38bdf8;
+  --accent-hi: #0ea5e9;
+  --green:     #22c55e;
+  --red:       #ef4444;
+  --amber:     #f59e0b;
+  --wp-blue:   #21759b;
+  --radius:    8px;
+  --font:      ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+html { font-size: 14px; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle noise texture overlay */
+.noise {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.header, .main, .footer {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-logo { flex-shrink: 0; }
+
+.header-title {
+  font-family: var(--font);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.header-sub {
+  font-size: 0.8rem;
+  color: var(--text-mute);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.header-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  font-family: var(--font);
+  font-size: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.badge-label {
+  color: var(--text-mute);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Main ─────────────────────────────────────────────────── */
+.main { padding-top: 1.5rem; padding-bottom: 3rem; }
+
+.section { margin-bottom: 2rem; }
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-mute);
+}
+
+.section-count {
+  font-family: var(--font);
+  font-size: 0.7rem;
+  color: var(--text-mute);
+}
+
+/* ── Card Grid ────────────────────────────────────────────── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.card-grid--sites {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+/* ── Service Card ─────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  transition: border-color 0.2s, transform 0.2s;
+  animation: cardIn 0.3s ease both;
+}
+
+.card:hover {
+  border-color: var(--border-hi);
+  transform: translateY(-1px);
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.card-service {
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.card-image {
+  font-family: var(--font);
+  font-size: 0.75rem;
+  color: var(--text-mute);
+  margin-bottom: 0.35rem;
+}
+
+.card-status {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.card-ports {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.port-tag {
+  font-family: var(--font);
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: 4px;
+  color: var(--accent);
+}
+
+/* ── Status Dot ───────────────────────────────────────────── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot--running {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+  animation: pulse-green 2s ease-in-out infinite;
+}
+
+.status-dot--exited {
+  background: var(--red);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.3);
+}
+
+.status-dot--other {
+  background: var(--amber);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.3);
+  animation: pulse-amber 2s ease-in-out infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
+  50%      { box-shadow: 0 0 12px rgba(34, 197, 94, 0.7); }
+}
+
+@keyframes pulse-amber {
+  0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.3); }
+  50%      { box-shadow: 0 0 12px rgba(245, 158, 11, 0.6); }
+}
+
+/* ── Site Card ────────────────────────────────────────────── */
+.site-name {
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 1rem;
+  color: #fff;
+  margin-bottom: 0.15rem;
+}
+
+.site-domain {
+  font-family: var(--font);
+  font-size: 0.8rem;
+  color: var(--text-mute);
+  margin-bottom: 0.6rem;
+}
+
+.site-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.site-link {
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.site-link:hover { color: #7dd3fc; }
+
+.site-link::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-mute);
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+.site-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.wp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  background: rgba(33, 117, 155, 0.15);
+  border: 1px solid rgba(33, 117, 155, 0.3);
+  border-radius: 100px;
+  color: #5cb3d4;
+}
+
+.db-tag {
+  font-family: var(--font);
+  font-size: 0.7rem;
+  color: var(--text-mute);
+}
+
+/* ── Quick Links ──────────────────────────────────────────── */
+.links-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.quick-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.quick-link:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+.quick-link-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.quick-link-icon--mailpit  { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+.quick-link-icon--adminer  { background: rgba(34, 197, 94, 0.15);  color: #4ade80; }
+.quick-link-icon--dash     { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+
+.quick-link-label {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.quick-link-url {
+  font-family: var(--font);
+  font-size: 0.7rem;
+  color: var(--text-mute);
+}
+
+/* ── Config Table ─────────────────────────────────────────── */
+.config-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.config-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.config-table th {
+  text-align: left;
+  padding: 0.6rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-mute);
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border);
+}
+
+.config-table td {
+  padding: 0.45rem 1rem;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.config-table tr:last-child td { border-bottom: none; }
+
+.config-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+.config-key {
+  font-family: var(--font);
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.config-val {
+  font-family: var(--font);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.config-val--masked { color: var(--text-mute); font-style: italic; }
+
+/* ── Footer ───────────────────────────────────────────────── */
+.footer {
+  padding-bottom: 2rem;
+  text-align: center;
+}
+
+.footer-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-mute);
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* ── Empty State ──────────────────────────────────────────── */
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-mute);
+  font-size: 0.85rem;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* ── Loading Skeleton ─────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, rgba(51, 65, 85, 0.5) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius);
+  min-height: 80px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  html { font-size: 13px; }
+  .header { flex-direction: column; align-items: flex-start; }
+  .card-grid, .card-grid--sites { grid-template-columns: 1fr; }
+  .links-row { flex-direction: column; }
+  .config-table { font-size: 0.8rem; }
+}

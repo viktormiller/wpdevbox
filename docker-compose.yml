@@ -103,6 +103,8 @@ services:
     command: ["sh", "-c", "node server.js"]
     volumes:
       - ./dashboard:/app
+      - ./.env:/app/.env:ro
+      - ./data/www:/sites:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "${DASHBOARD_PORT:-19000}:9000"

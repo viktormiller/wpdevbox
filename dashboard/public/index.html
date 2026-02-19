@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WPDevBox</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230f172a'/><text x='16' y='22' font-size='18' text-anchor='middle' fill='%2338bdf8'>W</text></svg>">
+</head>
+<body>
+  <div class="noise"></div>
+
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="6" fill="#0ea5e9"/>
+          <path d="M7 22L10.5 10H13L15.5 18L18 10H20.5L24 22H21.5L19.2 13L16.5 22H14.5L11.8 13L9.5 22H7Z" fill="#0f172a"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="header-title">WPDevBox</h1>
+        <p class="header-sub">Local WordPress Development</p>
+      </div>
+    </div>
+    <div class="header-badges" id="header-badges"></div>
+  </header>
+
+  <main class="main">
+    <section class="section" id="section-services">
+      <div class="section-head">
+        <h2 class="section-title">Services</h2>
+        <span class="section-count" id="services-count"></span>
+      </div>
+      <div class="card-grid" id="services-grid"></div>
+    </section>
+
+    <section class="section" id="section-sites">
+      <div class="section-head">
+        <h2 class="section-title">Sites</h2>
+        <span class="section-count" id="sites-count"></span>
+      </div>
+      <div class="card-grid card-grid--sites" id="sites-grid"></div>
+    </section>
+
+    <section class="section" id="section-links">
+      <div class="section-head">
+        <h2 class="section-title">Quick Links</h2>
+      </div>
+      <div class="links-row" id="quick-links"></div>
+    </section>
+
+    <section class="section" id="section-config">
+      <div class="section-head">
+        <h2 class="section-title">Configuration</h2>
+      </div>
+      <div class="config-table-wrap">
+        <table class="config-table" id="config-table">
+          <thead><tr><th>Variable</th><th>Value</th></tr></thead>
+          <tbody id="config-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-refresh">
+      <span class="pulse-dot pulse-dot--live"></span>
+      Auto-refreshing every 10s
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
