@@ -137,9 +137,11 @@ async function apiContainers(req, res) {
       image: c.Image,
       state: c.State,
       status: c.Status,
-      ports: (c.Ports || [])
-        .filter((p) => p.PublicPort)
-        .map((p) => `${p.PublicPort}:${p.PrivatePort}/${p.Type}`),
+      ports: [...new Set(
+        (c.Ports || [])
+          .filter((p) => p.PublicPort)
+          .map((p) => `${p.PublicPort}:${p.PrivatePort}/${p.Type}`)
+      )],
       health: (c.State === 'running' && c.Status.includes('healthy'))
         ? 'healthy'
         : (c.State === 'running' && c.Status.includes('health:'))
