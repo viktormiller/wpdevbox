@@ -56,12 +56,13 @@ print_urls() {
 ensure_wp_cli() {
   require_docker
 
-  if "${compose[@]}" exec -T php sh -lc 'command -v wp >/dev/null 2>&1'; then
+  # Check if phar already exists (wrapper may need refresh, but phar is the slow part)
+  if "${compose[@]}" exec -T php sh -lc 'test -x /usr/local/bin/wp-cli.phar' 2>/dev/null; then
     return 0
   fi
 
   echo "WP-CLI missing in php container -> installing..."
-  "${compose[@]}" exec -T php sh -lc "set -e; curl -fsSL '$WP_CLI_PHAR_URL' -o /usr/local/bin/wp; chmod +x /usr/local/bin/wp"
+  "${compose[@]}" exec -T php sh -lc "set -e; curl -fsSL '${WP_CLI_PHAR_URL}' -o /usr/local/bin/wp-cli.phar; chmod +x /usr/local/bin/wp-cli.phar; printf '#!/bin/sh\nexport COLUMNS=200\nexec /usr/local/bin/wp-cli.phar --allow-root --ssh= \"\$@\"\n' > /usr/local/bin/wp; chmod +x /usr/local/bin/wp"
 
   if ! "${compose[@]}" exec -T php sh -lc 'command -v wp >/dev/null 2>&1'; then
     echo "Error: WP-CLI install failed in php container." >&2
@@ -124,6 +125,10 @@ add_site() {
 phpinfo();
 PHP
   fi
+
+  cat > "$site_dir/wp-cli.yml" <<YML
+ssh: docker:devbox-php/var/www/html/${site}
+YML
 
   if [[ ! -f "$CERT_FILE" || ! -f "$KEY_FILE" ]]; then
     echo "SSL certs missing -> attempting ./bin/devbox ssl-init"

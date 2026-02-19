@@ -274,9 +274,11 @@ async function apiCreateSite(req, res) {
       return json(res, { error: `Site '${name}' already exists.` }, 400);
     }
 
-    // Create directory and placeholder index.php
+    // Create directory, placeholder index.php, and wp-cli.yml for host WP-CLI
     fs.mkdirSync(siteDir, { recursive: true });
     fs.writeFileSync(path.join(siteDir, 'index.php'), `<?php\n// Placeholder for ${name}\nphpinfo();\n`);
+    fs.writeFileSync(path.join(siteDir, 'wp-cli.yml'),
+      `ssh: docker:devbox-php/var/www/html/${name}\n`);
 
     // Create database via exec into the db container
     const dbName = 'wp_' + name.replace(/-/g, '_');
