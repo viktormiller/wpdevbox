@@ -184,6 +184,100 @@ Should return 127.0.0.1
 TXT
 }
 
+doctor() {
+  require_docker
+
+  local ok=0
+  local warn=0
+  local fail=0
+
+  mark_ok() {
+    ok=$((ok + 1))
+    echo "✅ $1"
+  }
+
+  mark_warn() {
+    warn=$((warn + 1))
+    echo "⚠️  $1"
+  }
+
+  mark_fail() {
+    fail=$((fail + 1))
+    echo "❌ $1"
+  }
+
+  echo "WPDevBox Doctor"
+  echo "-------------"
+  echo "Profile: $web_profile"
+
+  if docker info >/dev/null 2>&1; then
+    mark_ok "Docker daemon reachable"
+  else
+    mark_fail "Docker daemon not reachable"
+  fi
+
+  if [[ -f .env ]]; then
+    mark_ok ".env present"
+  else
+    mark_warn ".env missing (copy .env.example -> .env)"
+  fi
+
+  if [[ -f "$CERT_FILE" && -f "$KEY_FILE" ]]; then
+    mark_ok "SSL cert files present (${CERT_FILE##*/}, ${KEY_FILE##*/})"
+  else
+    mark_warn "SSL cert files missing (run ./bin/devbox ssl-init)"
+  fi
+
+  local key_perms=""
+  if [[ -f "$KEY_FILE" ]]; then
+    key_perms="$(stat -c '%a' "$KEY_FILE" 2>/dev/null || stat -f '%Lp' "$KEY_FILE" 2>/dev/null || true)"
+  fi
+  if [[ -n "$key_perms" ]]; then
+    if [[ "$key_perms" == "644" || "$key_perms" == "640" ]]; then
+      mark_ok "SSL key permissions look container-compatible ($key_perms)"
+    else
+      mark_warn "SSL key permissions are $key_perms (if Apache exits, try: chmod 644 $KEY_FILE)"
+    fi
+  fi
+
+  if "${compose[@]}" ps --services --filter status=running | grep -qx db; then
+    mark_ok "db running"
+  else
+    mark_fail "db not running"
+  fi
+
+  if "${compose[@]}" ps --services --filter status=running | grep -qx php; then
+    mark_ok "php running"
+  else
+    mark_fail "php not running"
+  fi
+
+  if "${compose[@]}" --profile "$web_profile" ps --services --filter status=running | grep -qx "$web_profile"; then
+    mark_ok "$web_profile running"
+  else
+    mark_fail "$web_profile not running"
+  fi
+
+  if "${compose[@]}" exec -T db sh -lc "mysqladmin ping -h localhost -u root -p\"${MYSQL_ROOT_PASSWORD:-root}\" >/dev/null 2>&1"; then
+    mark_ok "database reachable"
+  else
+    mark_fail "database ping failed"
+  fi
+
+  if "${compose[@]}" exec -T php sh -lc 'command -v wp >/dev/null 2>&1'; then
+    mark_ok "WP-CLI available in php container"
+  else
+    mark_warn "WP-CLI missing in php container (auto-installs on ./bin/devbox wp ...)"
+  fi
+
+  echo
+  echo "Summary: ${ok} ok, ${warn} warnings, ${fail} failures"
+
+  if (( fail > 0 )); then
+    return 1
+  fi
+}
+
 case "$cmd" in
   up)
     require_docker
@@ -222,6 +316,9 @@ case "$cmd" in
   dns-setup)
     dns_setup
     ;;
+  doctor)
+    doctor
+    ;;
   help|*)
     cat <<USAGE
 Usage: devbox <command>
@@ -230,6 +327,7 @@ Usage: devbox <command>
   add-site <name> [--with-wp]
   ssl-init
   dns-setup
+  doctor
 USAGE
     ;;
 esac
