@@ -105,6 +105,11 @@ add_site() {
 
   ensure_site_name "$site"
 
+  if [[ "$site" == "general" ]]; then
+    echo "Error: 'general' is reserved for the shared code directory." >&2
+    exit 1
+  fi
+
   local site_dir="data/www/${site}"
   local db_name
   db_name="$(db_name_for_site "$site")"

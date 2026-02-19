@@ -265,6 +265,10 @@ async function apiCreateSite(req, res) {
       return json(res, { error: 'Invalid name. Use lowercase letters, numbers, and hyphens only.' }, 400);
     }
 
+    if (name === 'general') {
+      return json(res, { error: "'general' is reserved for the shared code directory." }, 400);
+    }
+
     const siteDir = path.join(SITES_DIR, name);
     if (dirExists(siteDir)) {
       return json(res, { error: `Site '${name}' already exists.` }, 400);
