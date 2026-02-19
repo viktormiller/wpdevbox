@@ -187,45 +187,72 @@ TXT
 doctor() {
   require_docker
 
+  local format="text"
+  if [[ "${1:-}" == "--json" ]]; then
+    format="json"
+    shift
+  fi
+
+  if [[ $# -gt 0 ]]; then
+    echo "Usage: devbox doctor [--json]" >&2
+    return 2
+  fi
+
   local ok=0
   local warn=0
   local fail=0
+  local checks_json=""
+
+  append_check_json() {
+    local status="$1"
+    local name="$2"
+    local message="$3"
+    if [[ -n "$checks_json" ]]; then
+      checks_json+=" ,"
+    fi
+    checks_json+="{\"name\":\"${name}\",\"status\":\"${status}\",\"message\":\"${message}\"}"
+  }
 
   mark_ok() {
     ok=$((ok + 1))
-    echo "✅ $1"
+    append_check_json "ok" "$1" "$2"
+    [[ "$format" == "text" ]] && echo "✅ $2"
   }
 
   mark_warn() {
     warn=$((warn + 1))
-    echo "⚠️  $1"
+    append_check_json "warn" "$1" "$2"
+    [[ "$format" == "text" ]] && echo "⚠️  $2"
   }
 
   mark_fail() {
     fail=$((fail + 1))
-    echo "❌ $1"
+    append_check_json "fail" "$1" "$2"
+    [[ "$format" == "text" ]] && echo "❌ $2"
   }
 
-  echo "WPDevBox Doctor"
-  echo "-------------"
-  echo "Profile: $web_profile"
+  if [[ "$format" == "text" ]]; then
+    echo "WPDevBox Doctor"
+    echo "-------------"
+    echo "Profile: $web_profile"
+  fi
 
   if docker info >/dev/null 2>&1; then
-    mark_ok "Docker daemon reachable"
+    mark_ok "docker_daemon" "Docker daemon reachable"
   else
-    mark_fail "Docker daemon not reachable"
+    mark_fail "docker_daemon" "Docker daemon not reachable"
   fi
 
   if [[ -f .env ]]; then
-    mark_ok ".env present"
+    mark_ok "env_file" ".env present"
   else
-    mark_warn ".env missing (copy .env.example -> .env)"
+    mark_warn "env_file" ".env missing (copy .env.example -> .env)"
   fi
 
   if [[ -f "$CERT_FILE" && -f "$KEY_FILE" ]]; then
-    mark_ok "SSL cert files present (${CERT_FILE##*/}, ${KEY_FILE##*/})"
+    mark_ok "ssl_files" "SSL cert files present (${CERT_FILE##*/}, ${KEY_FILE##*/})"
   else
-    mark_warn "SSL cert files missing (run ./bin/devbox ssl-init)"
+    mark_warn "ssl_files" "SSL cert files missing (run ./bin/devbox ssl-init)"
   fi
 
   local key_perms=""
@@ -234,44 +261,49 @@ doctor() {
   fi
   if [[ -n "$key_perms" ]]; then
     if [[ "$key_perms" == "644" || "$key_perms" == "640" ]]; then
-      mark_ok "SSL key permissions look container-compatible ($key_perms)"
+      mark_ok "ssl_key_perms" "SSL key permissions look container-compatible ($key_perms)"
     else
-      mark_warn "SSL key permissions are $key_perms (if Apache exits, try: chmod 644 $KEY_FILE)"
+      mark_warn "ssl_key_perms" "SSL key permissions are $key_perms (if Apache exits, try: chmod 644 $KEY_FILE)"
     fi
   fi
 
   if "${compose[@]}" ps --services --filter status=running | grep -qx db; then
-    mark_ok "db running"
+    mark_ok "service_db" "db running"
   else
-    mark_fail "db not running"
+    mark_fail "service_db" "db not running"
   fi
 
   if "${compose[@]}" ps --services --filter status=running | grep -qx php; then
-    mark_ok "php running"
+    mark_ok "service_php" "php running"
   else
-    mark_fail "php not running"
+    mark_fail "service_php" "php not running"
   fi
 
   if "${compose[@]}" --profile "$web_profile" ps --services --filter status=running | grep -qx "$web_profile"; then
-    mark_ok "$web_profile running"
+    mark_ok "service_web" "$web_profile running"
   else
-    mark_fail "$web_profile not running"
+    mark_fail "service_web" "$web_profile not running"
   fi
 
   if "${compose[@]}" exec -T db sh -lc "mysqladmin ping -h localhost -u root -p\"${MYSQL_ROOT_PASSWORD:-root}\" >/dev/null 2>&1"; then
-    mark_ok "database reachable"
+    mark_ok "db_ping" "database reachable"
   else
-    mark_fail "database ping failed"
+    mark_fail "db_ping" "database ping failed"
   fi
 
   if "${compose[@]}" exec -T php sh -lc 'command -v wp >/dev/null 2>&1'; then
-    mark_ok "WP-CLI available in php container"
+    mark_ok "wp_cli" "WP-CLI available in php container"
   else
-    mark_warn "WP-CLI missing in php container (auto-installs on ./bin/devbox wp ...)"
+    mark_warn "wp_cli" "WP-CLI missing in php container (auto-installs on ./bin/devbox wp ...)"
   fi
 
-  echo
-  echo "Summary: ${ok} ok, ${warn} warnings, ${fail} failures"
+  if [[ "$format" == "json" ]]; then
+    printf '{"profile":"%s","summary":{"ok":%d,"warnings":%d,"failures":%d},"checks":[%s]}
+' "$web_profile" "$ok" "$warn" "$fail" "$checks_json"
+  else
+    echo
+    echo "Summary: ${ok} ok, ${warn} warnings, ${fail} failures"
+  fi
 
   if (( fail > 0 )); then
     return 1
@@ -327,7 +359,7 @@ Usage: devbox <command>
   add-site <name> [--with-wp]
   ssl-init
   dns-setup
-  doctor
+  doctor [--json]
 USAGE
     ;;
 esac

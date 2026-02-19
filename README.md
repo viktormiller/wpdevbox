@@ -44,6 +44,7 @@ Configured in `.env` and chosen to avoid common Local WP defaults.
 ./bin/devbox add-site ffb --with-wp
 ./bin/devbox dns-setup
 ./bin/devbox doctor
+./bin/devbox doctor --json
 ```
 
 `ssl-init` creates local trusted certs (mkcert) for `*.loc` and `localhost` in `config/certs/`.
